@@ -1,0 +1,8 @@
+CMakeFiles/
+CMakeCache.txt
+bin/
+Makefile
+cmake_install.cmake
+lib*.a
+compile_commands.json
+.cache/
