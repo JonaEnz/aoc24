@@ -3,82 +3,46 @@
 #include <cstdio>
 #include <cstdlib>
 #include <functional>
-#include <iostream>
-#include <numeric>
 #include <ranges>
 #include <string>
 #include <util.h>
-#include <utility>
 #include <vector>
 
 using Entry = std::vector<int>;
 
+namespace {
+
+bool allDescOrInc(Entry &e) {
+  return std::ranges::is_sorted(e, std::less{}) ||
+         std::ranges::is_sorted(e, std::greater{});
+};
+bool diffAtMostThree(Entry &e) {
+  for (auto [a, b] : e | std::views::pairwise) {
+    if (auto d = abs(a - b); d > 3 || d < 1) {
+      return false;
+    }
+  }
+  return true;
+};
+
+bool isSafe(Entry &e) { return allDescOrInc(e) && diffAtMostThree(e); };
+} // namespace
+
 int part1(std::vector<Entry> input) {
-  auto allDesc = [](Entry &e) {
-    for (auto i = 0; i < e.size() - 1; i++) {
-      if (e[i + 1] >= e[i]) {
-        return false;
-      }
-    }
-    return true;
-  };
-  auto allInc = [](Entry &e) {
-    for (auto i = 0; i < e.size() - 1; i++) {
-      if (e[i + 1] <= e[i]) {
-        return false;
-      }
-    }
-    return true;
-  };
-  auto diffAtMostThree = [](Entry &e) {
-    for (auto i = 0; i < e.size() - 1; i++) {
-      if (abs(e[i + 1] - e[i]) > 3) {
-        return false;
-      }
-    }
-    return true;
-  };
-  auto safe = [allInc, allDesc, diffAtMostThree](Entry &e) {
-    return (allInc(e) || allDesc(e)) && diffAtMostThree(e);
-  };
-  return std::ranges::count_if(input, safe);
+  return std::ranges::count_if(input, isSafe);
 }
 int part2(std::vector<Entry> input) {
-  auto allDesc = [](Entry &e) {
-    for (auto i = 0; i < e.size() - 1; i++) {
-      if (e[i + 1] >= e[i]) {
-        return false;
-      }
-    }
-    return true;
-  };
-  auto allInc = [](Entry &e) {
-    for (auto i = 0; i < e.size() - 1; i++) {
-      if (e[i + 1] <= e[i]) {
-        return false;
-      }
-    }
-    return true;
-  };
-  auto diffAtMostThree = [](Entry &e) {
-    for (auto i = 0; i < e.size() - 1; i++) {
-      if (abs(e[i + 1] - e[i]) > 3) {
-        return false;
-      }
-    }
-    return true;
-  };
-  auto safe = [allInc, allDesc, diffAtMostThree](Entry &e) {
+  auto isDampSafe = [](Entry &e) {
     for (int j = 0; j < e.size(); j++) {
       Entry eCopy(e);
       eCopy.erase(eCopy.begin() + j);
-      if ((allInc(eCopy) || allDesc(eCopy)) && diffAtMostThree(eCopy)) {
+      if (isSafe(eCopy)) {
         return true;
       }
     }
     return false;
   };
-  return std::ranges::count_if(input, safe);
+  return std::ranges::count_if(input, isDampSafe);
 }
 
 int main(int argc, char *argv[]) {
