@@ -20,3 +20,4 @@ include_directories(${PROJECT_SOURCE_DIR}/utils)
 
 add_subdirectory(utils)
 add_subdirectory(day1)
+add_subdirectory(day2)

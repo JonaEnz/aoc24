@@ -15,7 +15,7 @@ std::string readFile(const std::string path) {
 }
 
 std::vector<std::string> readFileLines(const std::string path) {
-  auto rawInput = readFile("day1.txt");
+  auto rawInput = readFile(path);
   std::vector<std::string> input{};
   size_t pos = 0;
   while ((pos = rawInput.find('\n')) != std::string::npos) {
