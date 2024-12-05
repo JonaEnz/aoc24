@@ -14,6 +14,19 @@ std::string readFile(const std::string path) {
   return s;
 }
 
+std::vector<std::string> splitString(const std::string iinput,
+                                     const std::string delim) {
+  std::string input = iinput;
+  size_t pos = 0;
+  std::vector<std::string> output{};
+  while ((pos = input.find(delim)) != std::string::npos) {
+    output.push_back(input.substr(0, pos));
+    input.erase(0, pos + 1);
+  }
+  output.push_back(input);
+  return output;
+}
+
 std::vector<std::string> readFileLines(const std::string path) {
   auto rawInput = readFile(path);
   std::vector<std::string> input{};

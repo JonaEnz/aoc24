@@ -5,6 +5,7 @@
 
 std::string readFile(const std::string);
 std::vector<std::string> readFileLines(const std::string);
+std::vector<std::string> splitString(const std::string, const std::string);
 
 template <typename T>
 std::vector<T>
