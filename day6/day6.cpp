@@ -56,8 +56,13 @@ int part1(const Field &input) {
   return s.size();
 }
 
-std::pair<PlayerT, bool> getsStuck(Field &field, PlayerT init, PlayerT &curr) {
-  std::set<PlayerT> set = {init};
+int getPlayerId(PlayerT &player) {
+  return std::get<0>(player) * 10000 + std::get<1>(player) * 10 +
+         std::get<2>(player);
+}
+
+bool getsStuck(Field &field, PlayerT init, PlayerT &curr,
+               std::set<PlayerT> set) {
   field[std::get<0>(curr)][std::get<1>(curr)] = Fields::Full;
   auto lastPos = std::get<2>(init);
   while (nextPlayerPos(field, init)) {
@@ -67,22 +72,25 @@ std::pair<PlayerT, bool> getsStuck(Field &field, PlayerT init, PlayerT &curr) {
     lastPos = std::get<2>(init);
     if (set.contains(init)) {
       field[std::get<0>(curr)][std::get<1>(curr)] = Fields::Empty;
-      return {curr, true};
+      return true;
     }
     set.insert(init);
   }
   field[std::get<0>(curr)][std::get<1>(curr)] = Fields::Empty;
-  return {curr, false};
+  return false;
 }
 
 int part2(Field &input) {
   auto p = getPlayerPos(input);
   PlayerT player = {p.first, p.second, Direction::Up};
   PlayerT init = player;
+  std::set<PlayerT> set = {init};
   std::set<std::pair<int, int>> stuckSet = {};
   while (nextPlayerPos(input, player)) {
-    if (auto a = getsStuck(input, init, player); a.second) {
-      stuckSet.insert({std::get<0>(a.first), std::get<1>(a.first)});
+    set.insert(player);
+    std::pair<int, int> playerPos = {std::get<0>(player), std::get<1>(player)};
+    if (!stuckSet.contains(playerPos) && getsStuck(input, init, player, set)) {
+      stuckSet.insert(playerPos);
     }
   }
 
