@@ -21,7 +21,7 @@ std::vector<std::string> splitString(const std::string iinput,
   std::vector<std::string> output{};
   while ((pos = input.find(delim)) != std::string::npos) {
     output.push_back(input.substr(0, pos));
-    input.erase(0, pos + 1);
+    input.erase(0, pos + delim.size());
   }
   output.push_back(input);
   return output;
