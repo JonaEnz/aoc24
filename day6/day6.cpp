@@ -14,8 +14,21 @@ enum Direction { Up, Right, Down, Left };
 using Entry = std::vector<Fields>;
 using Field = std::vector<Entry>;
 using PlayerT = std::tuple<int, int, Direction>;
-
-static std::map<Direction, std::pair<int, int>> dir = {
+class State {
+public:
+  std::pair<int, int> pos;
+  Direction dir;
+  bool nextPlayerPos(const Field &);
+  int Id();
+  bool getsStuck(Field &, State init, std::set<State>);
+  bool operator<(const State &other) const {
+    if (dir != other.dir)
+      return dir < other.dir;
+    else
+      return pos < other.pos;
+  };
+};
+static std::map<Direction, std::pair<int, int>> directions = {
     {Up, {-1, 0}}, {Right, {0, 1}}, {Left, {0, -1}}, {Down, {1, 0}}};
 
 std::pair<int, int> getPlayerPos(const std::vector<Entry> &field) {
@@ -29,67 +42,62 @@ std::pair<int, int> getPlayerPos(const std::vector<Entry> &field) {
   return {0, 0};
 }
 
-bool nextPlayerPos(const Field &field, PlayerT &player) {
-  auto &d = dir[std::get<2>(player)];
-  auto i = std::get<0>(player) + d.first;
-  auto j = std::get<1>(player) + d.second;
+bool State::nextPlayerPos(const Field &field) {
+  auto &d = directions[dir];
+  auto i = pos.first + d.first;
+  auto j = pos.second + d.second;
   if (i < 0 || j < 0 || i >= field.size() || j >= field[i].size()) {
     return false;
   }
   if (field[i][j] == Fields::Full) {
-    std::get<2>(player) = static_cast<Direction>((std::get<2>(player) + 1) % 4);
+    dir = static_cast<Direction>((dir + 1) % 4);
   } else {
-    std::get<0>(player) = i;
-    std::get<1>(player) = j;
+    pos = {i, j};
   }
   return true;
 }
 
 int part1(const Field &input) {
   auto p = getPlayerPos(input);
-  PlayerT player = {p.first, p.second, Direction::Up};
+  class State player = {p, Direction::Up};
   std::set<std::pair<int, int>> s = {{p.first, p.second}};
-  while (nextPlayerPos(input, player)) {
-    s.insert({std::get<0>(player), std::get<1>(player)});
+  while (player.nextPlayerPos(input)) {
+    s.insert(player.pos);
   }
 
   return s.size();
 }
 
-int getPlayerId(PlayerT &player) {
-  return std::get<0>(player) * 10000 + std::get<1>(player) * 10 +
-         std::get<2>(player);
-}
+int State::Id() { return pos.first * 10000 + pos.second * 10 + dir; }
 
-bool getsStuck(Field &field, PlayerT init, PlayerT &curr,
-               std::set<PlayerT> set) {
-  field[std::get<0>(curr)][std::get<1>(curr)] = Fields::Full;
-  auto lastPos = std::get<2>(init);
-  while (nextPlayerPos(field, init)) {
-    if (lastPos == std::get<2>(init)) {
+bool State::getsStuck(Field &field, State init, std::set<State> set) {
+  field[pos.first][pos.second] = Fields::Full;
+  auto lastPos = init.dir;
+  while (init.nextPlayerPos(field)) {
+    if (lastPos == init.dir) {
       continue;
     }
-    lastPos = std::get<2>(init);
+    lastPos = init.dir;
     if (set.contains(init)) {
-      field[std::get<0>(curr)][std::get<1>(curr)] = Fields::Empty;
+      field[pos.first][pos.second] = Fields::Empty;
       return true;
     }
     set.insert(init);
   }
-  field[std::get<0>(curr)][std::get<1>(curr)] = Fields::Empty;
+  field[pos.first][pos.second] = Fields::Empty;
   return false;
 }
 
 int part2(Field &input) {
   auto p = getPlayerPos(input);
-  PlayerT player = {p.first, p.second, Direction::Up};
-  PlayerT init = player;
-  std::set<PlayerT> set = {init};
+  class State player = {p, Direction::Up};
+  auto init = player;
+  std::set<State> set = {init};
   std::set<std::pair<int, int>> stuckSet = {};
-  while (nextPlayerPos(input, player)) {
+  while (player.nextPlayerPos(input)) {
     set.insert(player);
-    std::pair<int, int> playerPos = {std::get<0>(player), std::get<1>(player)};
-    if (!stuckSet.contains(playerPos) && getsStuck(input, init, player, set)) {
+    std::pair<int, int> playerPos = player.pos;
+    if (!stuckSet.contains(playerPos) && player.getsStuck(input, init, set)) {
       stuckSet.insert(playerPos);
     }
   }
