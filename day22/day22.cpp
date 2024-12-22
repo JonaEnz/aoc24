@@ -31,7 +31,14 @@ long part1(const std::vector<long> &input) {
       input.begin(), input.end(), (long)0,
       [&lambda](auto acc, auto n) { return acc + lambda(n); });
 }
-using Map = std::map<std::array<int, 4>, long>;
+
+template <> struct std::hash<std::array<int, 4>> {
+  auto operator()(const std::array<int, 4> &o) const {
+    return o[0] + o[1] * 100 + o[2] * 10000 + o[3] * 1000000;
+  }
+};
+
+using Map = std::unordered_map<std::array<int, 4>, long>;
 long part2(std::vector<long> input) {
   auto getPriceMap = [](long secret) {
     Map sequencePrices{};
@@ -54,7 +61,7 @@ long part2(std::vector<long> input) {
   };
   std::vector<Map> sequences(input.size());
   std::transform(input.begin(), input.end(), sequences.begin(), getPriceMap);
-  std::map<std::array<int, 4>, bool> seen{};
+  std::unordered_map<std::array<int, 4>, bool> seen{};
   for (auto &e : sequences) {
     for (auto &[h, _] : e) {
       if (!seen.contains(h))
@@ -72,7 +79,6 @@ long part2(std::vector<long> input) {
       record = sum;
     }
   }
-
   return record;
 }
 
