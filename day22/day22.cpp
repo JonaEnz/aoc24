@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <climits>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -61,16 +62,18 @@ long part2(std::vector<long> input) {
   };
   std::vector<Map> sequences(input.size());
   std::transform(input.begin(), input.end(), sequences.begin(), getPriceMap);
-  std::unordered_map<std::array<int, 4>, bool> seen{};
+  std::unordered_map<std::array<int, 4>, int> seen{};
   for (auto &e : sequences) {
     for (auto &[h, _] : e) {
-      if (!seen.contains(h))
-        seen[h] = true;
+      seen[h]++;
     }
   }
-
+  auto maxCount = std::ranges::max(
+      seen | std::views::transform([](auto &v) { return v.second; }));
   long record = 0;
   for (auto &h : seen) {
+    if (h.second < maxCount / 2)
+      continue;
     long sum = 0;
     for (auto &s : sequences) {
       sum += s[h.first];
