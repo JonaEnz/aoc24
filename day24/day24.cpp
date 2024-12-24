@@ -8,6 +8,7 @@
 #include <map>
 #include <memory>
 #include <numeric>
+#include <ranges>
 #include <string>
 #include <util.h>
 #include <utility>
@@ -20,6 +21,8 @@ typedef struct Bit {
   std::shared_ptr<Bit> right;
   Op op;
   std::byte value;
+  std::string id;
+  std::vector<std::shared_ptr<Bit>> in;
 } Bit;
 using Input = std::map<std::string, std::shared_ptr<Bit>>;
 
@@ -56,30 +59,55 @@ long part1(Input &input) {
     index++;
   }
 }
-int part2(Input &input) {
-  auto setAdd = [&input](long a, long b) {
-    for (auto index = 0; true; index++) {
-      auto k1 =
-          "x" + std::string(index < 10 ? "0" : "") + std::to_string(index);
-      auto k2 =
-          "y" + std::string(index < 10 ? "0" : "") + std::to_string(index);
-      if (!input.contains(k1) || !input.contains(k2)) {
-        return;
-      }
-      input[k1]->value = (std::byte)(a & 0x1);
-      input[k2]->value = (std::byte)(b & 0x1);
-      b >>= 1;
-      a >>= 1;
+std::string part2(Input &input) {
+
+  auto badBit = [](std::shared_ptr<Bit> bit) {
+    if (bit->left == nullptr || bit->right == nullptr) {
+      return false;
     }
+    if (bit->id.starts_with("z") && bit->op != Op::XOR) {
+      return true;
+    }
+    if (bit->op == Op::XOR && !bit->id.starts_with("z") &&
+        !bit->left->id.starts_with("y") && !bit->right->id.starts_with("y")) {
+      return true;
+    }
+    if (bit->op == Op::XOR &&
+        !std::ranges::any_of(bit->in,
+                             [](auto &b) { return b->id.starts_with("z"); }) &&
+        (bit->left->id.starts_with("y") || bit->right->id.starts_with("y"))) {
+      return true;
+    }
+    if (bit->op == Op::AND &&
+        std::ranges::any_of(bit->in,
+                            [](auto &b) { return b->id.starts_with("z"); }) &&
+        (bit->left->id.starts_with("y") || bit->right->id.starts_with("y"))) {
+      return true;
+    }
+    if (bit->op == Op::OR &&
+        (bit->left->id.starts_with("y") || bit->right->id.starts_with("y"))) {
+      return true;
+    }
+    return false;
   };
-  for (long i = 1; i < ((long)1 << 60); i <<= 1) {
-    setAdd(i - 1, 1);
-    auto plus = part1(input);
-    if (plus != i)
-      std::cout << i - 1 << "+1=" << plus << "\n";
-  }
-  // Just a helper, solved manually with graphviz
-  return 0;
+  auto badNodes = std::views::filter(
+                      input, [&badBit](auto &b) { return badBit(b.second); }) |
+                  std::views::transform([](auto &a) { return a.second->id; }) |
+                  std::ranges::to<std::vector<std::string>>();
+  std::erase_if(badNodes, [&input, badNodes](auto &b) {
+    return input[b]->left->id == "y00" || input[b]->right->id == "y00" ||
+           input[b]->id == "z45" ||
+           std::ranges::any_of(input[b]->in,
+                               [](auto &b2) { return b2->id == "z45"; }) ||
+           std::ranges::any_of(input[b]->in, [&badNodes, &input](auto &i) {
+             return std::ranges::find(badNodes, i->id) != badNodes.end();
+           });
+  });
+  std::ranges::sort(badNodes);
+  auto s = std::accumulate(badNodes.begin(), badNodes.end(), std::string{},
+                           [](auto acc, auto &b) { return acc + b + ","; });
+  s.pop_back();
+  return s;
 }
 
 int main(int argc, char *argv[]) {
@@ -89,17 +117,21 @@ int main(int argc, char *argv[]) {
   for (auto it = lines.begin(); it != split; it++) {
     auto s = splitString(*it, ": ");
     input[s[0]] = std::make_shared<Bit>(nullptr, nullptr, Op::OR,
-                                        (std::byte)std::stoi(s[1]));
+                                        (std::byte)std::stoi(s[1]), s[0],
+                                        std::vector<std::shared_ptr<Bit>>{});
   }
   split++;
   for (auto it = split; it != lines.end(); it++) {
     auto s = splitString(*it, " ");
-    input[s[4]] = std::make_shared<Bit>();
+    input[s[4]] =
+        std::make_shared<Bit>(nullptr, nullptr, Op::OR, (std::byte)0, s[4],
+                              std::vector<std::shared_ptr<Bit>>{});
   }
   for (auto it = split; it != lines.end(); it++) {
     auto s = splitString(*it, " ");
     auto bit = input[s[4]];
     bit->left = input[s[0]];
+    bit->left->in.push_back(bit);
     if (s[1] == "XOR") {
       bit->op = Op::XOR;
     } else if (s[1] == "OR") {
@@ -108,10 +140,11 @@ int main(int argc, char *argv[]) {
       bit->op = Op::AND;
     }
     bit->right = input[s[2]];
+    bit->right->in.push_back(bit);
     bit->value = (std::byte)0x2;
   }
 
   printf("Part 1: %ld\n", part1(input));
-  printf("Part 2: %d\n", part2(input));
+  printf("Part 2: %s\n", part2(input).c_str());
   return 0;
 }
