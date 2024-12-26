@@ -5,24 +5,22 @@
 #include <cstdlib>
 #include <functional>
 #include <iostream>
-#include <map>
 #include <numeric>
 #include <ranges>
-#include <set>
 #include <string>
 #include <util.h>
 #include <vector>
 
 long NextSecretNumber(long secret) {
-  auto mixAndPrune = [](long n, long m) { return (n ^ m) % 16777216; };
-  secret = mixAndPrune(secret * 64, secret);
-  secret = mixAndPrune(secret / 32, secret);
-  secret = mixAndPrune(secret * 2048, secret);
+  auto mixAndPrune = [&secret](long n) { return (n ^ secret) % 16777216; };
+  secret = mixAndPrune(secret * 64);
+  secret = mixAndPrune(secret / 32);
+  secret = mixAndPrune(secret * 2048);
   return secret;
 }
 
 long part1(const std::vector<long> &input) {
-  auto lambda = [](auto secret) {
+  auto nextSecret2000 = [](auto secret) {
     for (auto _ : std::views::iota(0, 2000)) {
       secret = NextSecretNumber(secret);
     }
@@ -30,59 +28,33 @@ long part1(const std::vector<long> &input) {
   };
   return std::accumulate(
       input.begin(), input.end(), (long)0,
-      [&lambda](auto acc, auto n) { return acc + lambda(n); });
+      [&nextSecret2000](auto acc, auto n) { return acc + nextSecret2000(n); });
 }
 
-template <> struct std::hash<std::array<int, 4>> {
-  auto operator()(const std::array<int, 4> &o) const {
-    return o[0] + o[1] * 100 + o[2] * 10000 + o[3] * 1000000;
-  }
-};
-
-using Map = std::unordered_map<std::array<int, 4>, long>;
+using Map = std::unordered_map<int, int>;
 long part2(std::vector<long> input) {
   auto getPriceMap = [](long secret) {
     Map sequencePrices{};
-    std::array<int, 4> history = {0, 0, 0, 0};
+    int history = 0;
     for (auto i : std::views::iota(0, 2000)) {
       auto lastPrice = secret % 10;
       secret = NextSecretNumber(secret);
       auto price = secret % 10;
-      history = {
-          history[1],
-          history[2],
-          history[3],
-          (int)(price - lastPrice),
-      };
+      history = (history << 8) + (price - lastPrice + 10);
       if (!sequencePrices.contains(history) && i >= 4) {
         sequencePrices[history] = price;
       }
     }
     return sequencePrices;
   };
-  std::vector<Map> sequences(input.size());
-  std::transform(input.begin(), input.end(), sequences.begin(), getPriceMap);
-  std::unordered_map<std::array<int, 4>, int> seen{};
-  for (auto &e : sequences) {
-    for (auto &[h, _] : e) {
-      seen[h]++;
+  Map sum{};
+  for (auto &in : input) {
+    for (auto &[h, p] : getPriceMap(in)) {
+      sum[h] += p;
     }
   }
-  auto maxCount = std::ranges::max(
-      seen | std::views::transform([](auto &v) { return v.second; }));
-  long record = 0;
-  for (auto &h : seen) {
-    if (h.second < maxCount / 2)
-      continue;
-    long sum = 0;
-    for (auto &s : sequences) {
-      sum += s[h.first];
-    }
-    if (sum > record) {
-      record = sum;
-    }
-  }
-  return record;
+  return std::ranges::max(
+      sum | std::views::transform([](auto &v) { return v.second; }));
 }
 
 int main(int argc, char *argv[]) {
